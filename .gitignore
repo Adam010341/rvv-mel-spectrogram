@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+.venv
+
+# IDE
+.zed/
+.vscode/
+
+# LSP
+.clangd
+
+# AI
+.claude/
+CLAUDE.md
+
+# Generated output
+build/
+output/

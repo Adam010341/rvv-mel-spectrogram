@@ -1,0 +1,27 @@
+[project]
+name = "computer-organization"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "librosa>=0.11.0",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+plot = [
+    "matplotlib>=3.8",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["scripts"]
+filterwarnings = [
+    "ignore::DeprecationWarning:audioread",
+]
