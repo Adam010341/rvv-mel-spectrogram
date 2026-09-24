@@ -2,12 +2,13 @@
 
 ![RISC-V](https://img.shields.io/badge/ISA-RV64GCV-283272?logo=riscv&logoColor=white)
 ![RVV](https://img.shields.io/badge/RISC--V%20Vector-intrinsics-6f42c1)
-![C](https://img.shields.io/badge/language-C11-00599C?logo=c&logoColor=white)
-![Python](https://img.shields.io/badge/reference-librosa%20%2B%20uv-3776AB?logo=python&logoColor=white)
+![C](https://img.shields.io/badge/language-C-00599C?logo=c&logoColor=white)
+![Python](https://img.shields.io/badge/reference-NumPy%20%2B%20librosa-3776AB?logo=python&logoColor=white)
 
 An audio front end (**FFT → power spectrum → mel filter bank**) vectorised by hand with
-**RISC-V Vector Extension (RVV 1.0) intrinsics**. It is benchmarked on the Spike simulator using
-hardware cycle counters (`Zicntr`) and checked against a Python/librosa reference.
+**RISC-V Vector Extension (RVV 1.0) intrinsics**. It is benchmarked on the Spike simulator with the
+`cycle` counter (`rdcycle`, `Zicntr`) and checked against expected outputs from the course's NumPy
+reference model, [`scripts/mel_spectrogram.py`](scripts/mel_spectrogram.py).
 
 <p align="center">
   <img src="assets/mel_spectrogram.png" alt="Mel spectrogram of the librosa trumpet example clip" width="640">
@@ -30,7 +31,7 @@ hardware cycle counters (`Zicntr`) and checked against a Python/librosa referenc
   pairs are split into two vector registers in one pass, and `re² + im²` is fused with `vfmacc`.
 - **Mel filter bank** as a mat-vec product with **4-row register blocking**. Each power-spectrum
   chunk is loaded once and reused for four mel filters before being reduced with `vfredusum`.
-- **Vector-length-agnostic** code throughout. Every loop is strip-mined with `vsetvl`, so the
+- **Vector-length-agnostic** code throughout. Every vector loop is strip-mined with `vsetvl`, so the
   same binary is correct for any hardware `VLEN`.
 
 ## The pipeline
@@ -89,7 +90,7 @@ This cuts memory traffic on the power spectrum by 4×. A scalar-row tail loop ha
 │   ├── utils.c             # provided: hann_window, stft, melspectrogram pipeline
 │   └── bench.c             # provided: correctness + cycle benchmark harness
 ├── include/mel_spectrogram.h
-├── scripts/                # Python ground truth (librosa) and scoring script
+├── scripts/                # NumPy ground truth, librosa cross-check, scoring script
 ├── data/                   # reference inputs and expected outputs
 ├── assets/                 # provided: spectrogram illustration
 ├── Makefile
@@ -117,8 +118,9 @@ hand-written intrinsics.
 ## What I'd improve next
 
 - **Register pressure in `mel_filter_bank`.** With `LMUL = 8` there are only four vector register
-  groups, but the 4-row block keeps five live (`power` + 4 rows), which forces spills. Using
-  `LMUL = 4` or `LMUL = 2` would avoid them.
+  groups, but in source order the 4-row block loads five values (`power` + 4 rows) before using
+  them, so the compiler has to reorder those loads or spill. `LMUL = 4` or `LMUL = 2` would leave
+  room for all five.
 - **Accumulate, then reduce once.** Keeping a vector accumulator with `vfmacc` and calling
   `vfredusum` once per dot product (instead of once per strip) would take the reduction off the
   inner loop.
