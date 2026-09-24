@@ -10,7 +10,12 @@ An audio front end (**FFT → power spectrum → mel filter bank**) vectorised b
 hardware cycle counters (`Zicntr`) and checked against a Python/librosa reference.
 
 <p align="center">
-  <img src="assets/mel_spectrogram.png" alt="Mel spectrogram produced by the pipeline" width="640">
+  <img src="assets/mel_spectrogram.png" alt="Mel spectrogram of the librosa trumpet example clip" width="640">
+  <br>
+  <sub>Mel spectrogram of librosa's <code>trumpet</code> example (n_fft 512, hop 160, 40 mel bands),
+  an illustration supplied with the assignment. The <code>melspec_trumpet</code> benchmark runs my
+  kernels on the first second of this clip and compares the result with the expected output stored
+  in <code>data/mel_spectrogram.txt</code>.</sub>
 </p>
 
 > Lab 2 of my *Computer Organization* coursework (NCKU CSIE, Spring 2026).
@@ -86,7 +91,7 @@ This cuts memory traffic on the power spectrum by 4×. A scalar-row tail loop ha
 ├── include/mel_spectrogram.h
 ├── scripts/                # Python ground truth (librosa) and scoring script
 ├── data/                   # reference inputs and expected outputs
-├── assets/
+├── assets/                 # provided: spectrogram illustration
 ├── Makefile
 └── pyproject.toml / uv.lock
 ```
@@ -130,5 +135,6 @@ hand-written intrinsics.
 
 ---
 
-<sub>The benchmark harness, pipeline glue (`utils.c`, `bench.c`), Python reference and data were
-provided by the course staff. The three kernels in `src/main.c` are my own work.</sub>
+<sub>The benchmark harness, pipeline glue (`utils.c`, `bench.c`), Python reference, data and the
+spectrogram image in `assets/` were provided by the course staff. The three kernels in
+`src/main.c` are my own work.</sub>
