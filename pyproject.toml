@@ -1,7 +1,7 @@
 [project]
-name = "computer-organization"
+name = "rvv-mel-spectrogram"
 version = "0.1.0"
-description = "Add your description here"
+description = "RISC-V Vector (RVV) mel spectrogram kernels - reference scripts and judge"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
