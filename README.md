@@ -5,8 +5,8 @@
 ![C](https://img.shields.io/badge/language-C-00599C?logo=c&logoColor=white)
 ![Python](https://img.shields.io/badge/reference-NumPy%20%2B%20librosa-3776AB?logo=python&logoColor=white)
 
-An audio front end (FFT, power spectrum, mel filter bank) vectorised by hand with RISC-V Vector
-Extension (RVV 1.0) intrinsics. It is benchmarked on the Spike simulator with the `cycle` counter
+An audio front end (FFT, power spectrum, mel filter bank) that I vectorised by hand with RISC-V
+Vector Extension (RVV 1.0) intrinsics. It is benchmarked on the Spike simulator with the `cycle` counter
 (`rdcycle`, `Zicntr`) and checked against the course's NumPy reference,
 [`scripts/mel_spectrogram.py`](scripts/mel_spectrogram.py).
 
@@ -24,16 +24,18 @@ Extension (RVV 1.0) intrinsics. It is benchmarked on the Spike simulator with th
 
 All three are in [`src/main.c`](src/main.c).
 
-- **`fft`**: radix-2 Cooley-Tukey. In-place bit-reversal with a reversed counter (`j ^= bit`), then
-  log2 n butterfly stages. Twiddle factors are precomputed per stage, and butterflies run `vl` at a
-  time with `LMUL = 8`. Complex multiply uses `vfmul` + `vfnmsac` / `vfmacc`.
-- **`power_spectrum`**: two strided loads (`vlse32`, stride 8 bytes) split the interleaved `re, im`
-  pairs, then `re*re` followed by `vfmacc(im, im)`. One loop over the flat `frames x 257` array.
-- **`mel_filter_bank`**: `out[f][m] = sum_k power[f][k] * bank[m][k]`. Four mel rows are processed
-  together, so each power-spectrum load is shared by four multiply-reduce chains (`vfredusum`).
-  A scalar tail handles `n_mels % 4`.
+`fft` is a radix-2 Cooley-Tukey. Bit-reversal is in place with a reversed counter (`j ^= bit`).
+Then log2 n butterfly stages, with twiddle factors precomputed per stage. Butterflies run `vl` at
+a time with `LMUL = 8`, and the complex multiply is `vfmul` + `vfnmsac` / `vfmacc`.
 
-Every vector loop is strip-mined with `vsetvl`, so the code does not depend on `VLEN`.
+`power_spectrum` uses two strided loads (`vlse32`, stride 8 bytes) to split the interleaved
+`re, im` pairs, then `re*re` and `vfmacc(im, im)`. One loop over the flat `frames x 257` array.
+
+`mel_filter_bank` computes `out[f][m] = sum_k power[f][k] * bank[m][k]`. I process four mel rows at
+once so each power-spectrum load is reused four times, then reduce with `vfredusum`. A scalar tail
+handles `n_mels % 4`.
+
+All vector loops are strip-mined with `vsetvl`, so nothing depends on `VLEN`.
 
 | Constant | Value | Meaning |
 |----------|-------|---------|
@@ -71,12 +73,12 @@ make run       # runs build/bench on Spike (RV64GCV_Zicntr), writes output/resul
 make judge     # compile + run + score correctness and speed-up vs. the scalar baseline
 ```
 
-`-fno-tree-vectorize` disables auto-vectorisation, so the speed-up comes from the intrinsics.
+`-fno-tree-vectorize` turns off auto-vectorisation, so the speed-up is from the intrinsics.
 
-## Possible improvements
+## Not done yet
 
-- Lower `LMUL` in `mel_filter_bank`: with `LMUL = 8` there are only four register groups, but the
-  4-row block loads five values (`power` + 4 rows) before using them.
+- `mel_filter_bank` at `LMUL = 8` has only four register groups, but the 4-row block loads five
+  values (`power` + 4 rows) before using them. A smaller `LMUL` should fix that.
 - Keep a `vfmacc` accumulator and call `vfredusum` once per dot product instead of once per strip.
 - Compute twiddle factors once for the largest stage and index with a stride
   (`W_len^k = W_N^{k·N/len}`) to drop the per-stage `sin`/`cos` calls.
